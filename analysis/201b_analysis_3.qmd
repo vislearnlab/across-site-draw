@@ -1,0 +1,252 @@
+---
+title: "Analysis 3: Variability as a function of age, site, and category"
+format: html
+---
+```{r setup, message=FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(performance)
+
+d <- read_csv("../data/distance_cat_site.csv") |>
+  mutate(
+    log_dist = log(distance_cat_site),
+    age_c = age - mean(age, na.rm = TRUE),
+    site = factor(location),
+    category = factor(drawing_category),
+    child_id = factor(participant_id)
+  )
+
+```
+
+```{r eda-check}
+# confirm log transform handled skew
+library(moments)
+skewness(d$distance_cat_site, na.rm = TRUE)
+skewness(d$log_dist, na.rm = TRUE)
+
+# cell sizes
+d |> count(site, category, age) |> summary()
+
+# number of drawings per child
+d |> count(child_id) |> summary()
+```
+
+## random-effects structure
+
+Fit with REML, minimal fixed effects (intercept + centered age).
+```{r phase1-models}
+r0 <- lmer(log_dist ~ age_c + (1 | child_id), data = d, REML = TRUE)
+
+r1 <- lmer(log_dist ~ age_c + (1 | child_id) + (1 | category), data = d, REML = TRUE)
+
+r2 <- lmer(log_dist ~ age_c + (1 | child_id) + (age_c | category), data = d, REML = TRUE)
+
+# fallback if r2 fails to converge: uncorrelated random effects
+r2_uncorr <- lmer(log_dist ~ age_c + (1 | child_id) + (1 | category) + (0 + age_c | category),
+                   data = d, REML = TRUE)
+```
+
+
+```{r phase1-compare}
+# ICC from intercept-only model
+r0_null <- lmer(log_dist ~ 1 + (1 | child_id), data = d, REML = TRUE)
+icc(r0_null)
+
+# compare random structures
+anova(r0, r1)
+anova(r1, r2)
+anova(r1, r2_uncorr)
+
+# AIC/BIC summary
+AIC(r0, r1, r2, r2_uncorr)
+BIC(r0, r1, r2, r2_uncorr)
+```
+
+
+```{r phase1-convergence}
+# check for convergence warnings and boundary estimates
+lapply(list(r0 = r0, r1 = r1, r2 = r2, r2_uncorr = r2_uncorr), function(m) {
+  vc <- as.data.frame(VarCorr(m))
+  list(
+    converged = length(m@optinfo$conv$lme4) == 0,
+    var_components = vc
+  )
+})
+```
+
+
+```{r phase1-select}
+# set the best random-effects structure here after inspecting above
+# replace with r0, r1, r2, or r2_uncorr as appropriate
+best_re <- "r2_uncorr"
+cat("Selected random-effects structure:", best_re, "\n")
+```
+
+## fixed effects
+
+Fit with ML for likelihood ratio tests on fixed effects. #TODO
+
+```{r fixed-models}
+# random-effects structure from Phase 1: r2_uncorr
+# (1 | child_id) + (1 | category) + (0 + age_c | category)
+
+re <- "(1 | child_id) + (1 | category) + (0 + age_c | category)"
+
+f0 <- lmer(log_dist ~ 1 + (1 | child_id) + (1 | category) + (0 + age_c | category),
+           data = d, REML = FALSE)
+
+f1 <- lmer(log_dist ~ age_c + (1 | child_id) + (1 | category) + (0 + age_c | category),
+           data = d, REML = FALSE)
+
+f2 <- lmer(log_dist ~ age_c + site + (1 | child_id) + (1 | category) + (0 + age_c | category),
+           data = d, REML = FALSE)
+
+f3 <- lmer(log_dist ~ age_c * site + (1 | child_id) + (1 | category) + (0 + age_c | category),
+           data = d, REML = FALSE)
+
+f4 <- lmer(log_dist ~ age_c * site + category + (1 | child_id) + (0 + age_c | category),
+           data = d, REML = FALSE)
+```
+
+```{r check-singularity}
+lapply(list(f1 = f1, f2 = f2, f3 = f3, f4 = f4), function(m) {
+  vc <- as.data.frame(VarCorr(m))
+  list(singular = isSingular(m), var_components = vc)
+})
+```
+
+```{r fixed-compare}
+anova(f0, f1)
+anova(f1, f2)
+anova(f2, f3)
+anova(f3, f4)
+```
+
+```{r category-level age slopes}
+# extract random slopes of age by category from f1 (or f2, same RE structure)
+re_cat <- ranef(f2)$category
+re_cat$category <- rownames(re_cat)
+
+# the random slope is the deviation from the fixed age effect
+fixef_age <- fixef(f2)["age_c"]
+re_cat$total_slope <- fixef_age + re_cat$age_c
+
+ggplot(re_cat, aes(x = reorder(category, total_slope), y = total_slope)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = fixef_age, linetype = "dashed", color = "grey50") +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  coord_flip() +
+  labs(x = NULL, y = "Age slope (fixed + random)",
+       title = "Category-level developmental trajectories",
+       subtitle = "Dashed = grand mean age slope; dotted = zero")
+```
+
+```{r fixed-summary}
+f4_clean <- lmer(log_dist ~ age_c + site + category + (1 | child_id) + (0 + age_c | category),
+                 data = d, REML = FALSE)
+f2_ml <- lmer(log_dist ~ age_c + site + (1 | child_id) + (1 | category) + (0 + age_c | category),
+              data = d, REML = FALSE)
+anova(f2_ml, f4_clean)
+
+# refit final model with REML for unbiased estimates
+f_final <- lmer(log_dist ~ age_c + site + category + (1 | child_id) + (0 + age_c | category),
+                data = d, REML = TRUE)
+summary(f_final)
+```
+```{r plotting-age}
+ggplot(d, aes(x = age, y = log_dist)) +
+  stat_summary(fun = mean, geom = "point") +
+  stat_summary(fun = mean, geom = "line") +
+  facet_wrap(~category) +
+  labs(x = "Age", y = "log(Distance to centroid)")
+```
+
+
+## Diagnostics
+```{r diagnostics, fig.width=10, fig.height=8}
+par(mfrow = c(2, 2))
+
+# residuals vs fitted
+plot(fitted(f_final), residuals(f_final),
+     xlab = "Fitted", ylab = "Residuals", main = "Residuals vs Fitted")
+abline(h = 0, lty = 2)
+
+# QQ plot of residuals
+qqnorm(residuals(f_final), main = "QQ: Residuals")
+qqline(residuals(f_final))
+
+# QQ plot of random effects (child)
+re_child <- ranef(f_final)$child_id[, 1]
+qqnorm(re_child, main = "QQ: Child random intercepts")
+qqline(re_child)
+
+# QQ plot of random effects (category)
+re_cat_slope <- ranef(f_final)$category[, 1]
+qqnorm(re_cat_slope, main = "QQ: Category random slopes")
+qqline(re_cat_slope)
+```
+
+```{r vif}
+# VIF for the interaction model
+library(car)
+vif(f_final)
+```
+
+## Exploratory: three-way interaction
+```{r f5-exploratory}
+f5 <- lmer(log_dist ~ age_c * site * category + (1 | child_id),
+           data = d, REML = FALSE)
+
+anova(f4_clean, f5)
+```
+
+```{r plot}
+# extract fixed effects
+fe <- fixef(f_final)
+
+# create prediction grid
+pred_grid <- expand.grid(
+  age_c = seq(min(d$age_c), max(d$age_c), length.out = 50),
+  site = levels(d$site)
+)
+
+# build prediction: intercept + age slope + site offset
+pred_grid$predicted <- fe["(Intercept)"] + 
+  fe["age_c"] * pred_grid$age_c
+
+# add site offsets (reference level gets 0)
+ref_level <- levels(d$site)[1]
+for (s in levels(d$site)) {
+  if (s != ref_level) {
+    coef_name <- paste0("site", s)
+    pred_grid$predicted[pred_grid$site == s] <- 
+      pred_grid$predicted[pred_grid$site == s] + fe[coef_name]
+  }
+}
+
+# convert back to raw age
+mean_age <- mean(d$age, na.rm = TRUE)
+pred_grid$age <- pred_grid$age_c + mean_age
+
+ggplot(pred_grid, aes(x = age, y = predicted, color = site)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Age (years)", y = "log(Distance to centroid)", color = "Site") +
+  theme_minimal()
+```
+
+```{r expo}
+pred_grid$predicted_raw <- exp(pred_grid$predicted)
+
+ggplot(pred_grid, aes(x = age, y = predicted_raw, color = site)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Age (years)", y = "Distance to centroid", color = "Site") +
+  theme_minimal()
+```
+
+## Bootstrap CIs for final model
+```{r bootstrap, cache=TRUE}
+# bootstrapped 95% CIs for fixed effects of final model
+boot_ci <- confint(f_final, method = "boot", nsim = 1000, seed = 57)
+boot_ci
+```
