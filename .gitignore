@@ -1,3 +1,9 @@
 **.DS_Store
 .Rhistory
 .Rproj.user
+analysis/201b_analysis_3_cache/html/__packages
+bootstrap*
+201b_analysis_3_cache/
+201b_analysis_3_files/
+201b_analysis_3.html
+data/figures/*png
