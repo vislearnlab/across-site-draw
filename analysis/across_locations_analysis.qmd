@@ -106,7 +106,7 @@ age_plot <- function(df_participant,
 
 
 ```{r}
-df <- read.csv(here("data/clip_recognizability_final.csv")) |>
+df <- read.csv(here("data/clip_recognizability.csv")) |>
   filter(drawing_category %in% c("airplane", "bike", "bird", "hat", "rabbit", "watch",
                                  "cat", "house", "cup", "chair", "tree", "car")) |>
   group_by(location, age) |>
@@ -175,6 +175,41 @@ rec.plot2 <- age_plot(
 ```{r}
 rec.plot1
 ggsave(here("data/figures/recognizability.svg"),rec.plot1, bg="white", device="pdf")
+```
+### CCN recognizability plot
+```{r rec_single, fig.width=6, fig.height=6}
+rec_single <- ggplot(data = df_part, 
+            aes(color = location, x = age, y = recognizability)) +
+  geom_jitter(alpha = 0.15, size = 1.5, width = 0.1) +
+  geom_pointrange(data = df_age_rec,
+                  aes(x = age, 
+                      y = mean_value,
+                      ymin = ci_lower, 
+                      ymax = ci_upper,
+                      color=location), 
+                  size = 1,
+                  alpha=0.8,
+                  show.legend = FALSE) +
+  scale_y_continuous(labels = number_format(accuracy = 0.01)) +
+  scale_color_viridis_d(begin = 0, end = 0.5) +
+  labs(
+    x = "Age (years)",
+    y = "Recognizability"
+  ) +
+  geom_hline(yintercept=1/12, linetype="dotted") + 
+  theme_classic(base_size = 16) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
+  theme(
+    axis.title.y = element_text(margin = margin(r = 16)),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 14)
+  )
+ggsave(here("data/figures/recognizability_single.svg"), rec_single, bg="white", device="pdf", width=8, height=8)
+rec_single
 ```
 
 ## Recognizability within categories
