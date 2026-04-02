@@ -16,6 +16,7 @@ library(scales)
 library(viridis)
 library(here)
 library(stringr)
+library(ggthemes)
 ```
 
 # Helpers
@@ -112,7 +113,7 @@ df <- read.csv(here("data/clip_recognizability.csv")) |>
   group_by(location, age) |>
   filter(n_distinct(participant_id) > 3) |>
   mutate(location = case_when(
-    location == "India" ~ "New Delhi",
+    location == "India" ~ "Delhi",
     location == "USA" ~ "San Jose",
     TRUE ~ location
   )) |>
@@ -178,38 +179,37 @@ ggsave(here("data/figures/recognizability.svg"),rec.plot1, bg="white", device="p
 ```
 ### CCN recognizability plot
 ```{r rec_single, fig.width=6, fig.height=6}
-rec_single <- ggplot(data = df_part, 
-            aes(color = location, x = age, y = recognizability)) +
-  geom_jitter(alpha = 0.15, size = 1.5, width = 0.1) +
+rec_single <- ggplot(data = df_part,
+                     aes(color = location, fill = location, x = age, y = recognizability)) +
+  # stat_smooth(method = "loess", geom = "ribbon", alpha = 0.1, span = 1, color = NA) +
+  stat_smooth(geom = "line", alpha = 0.3, linewidth = 0.8, span = 1, se = FALSE) +
+  scale_alpha_identity() +
   geom_pointrange(data = df_age_rec,
                   aes(x = age, 
                       y = mean_value,
                       ymin = ci_lower, 
-                      ymax = ci_upper,
-                      color=location), 
-                  size = 1,
-                  alpha=0.8,
-                  show.legend = FALSE) +
+                      ymax = ci_upper),
+                  size = 0.8, 
+                  alpha = 0.9,
+                  show.legend = FALSE,
+                  position = position_dodge(width = 0.4)) +
+  geom_hline(yintercept = 1/12, linetype = "dotted") +
+  scale_x_continuous(breaks = 4:9) + 
   scale_y_continuous(labels = number_format(accuracy = 0.01)) +
-  scale_color_viridis_d(begin = 0, end = 0.5) +
-  labs(
-    x = "Age (years)",
-    y = "Recognizability"
-  ) +
-  geom_hline(yintercept=1/12, linetype="dotted") + 
-  theme_classic(base_size = 16) +
+  scale_color_brewer(palette = "Set2") +
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = "Age (years)", y = "Recognizability") +
+  theme_few(base_size = 24) +
   guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
   theme(
     axis.title.y = element_text(margin = margin(r = 16)),
     axis.title.x = element_text(margin = margin(t = 10)),
-    plot.title = element_text(size = 18),
-    axis.title = element_text(size = 16),
-    axis.text = element_text(size = 14),
-    legend.text = element_text(size = 13),
-    legend.title = element_text(size = 14)
+    panel.border = element_blank(),
+    axis.line = element_line()
   )
-ggsave(here("data/figures/recognizability_single.svg"), rec_single, bg="white", device="pdf", width=8, height=8)
-rec_single
+
+ggsave(here("data/figures/recognizability_single.pdf"),
+       rec_single, bg = "white", width = 8, height = 6)
 ```
 
 ## Recognizability within categories
