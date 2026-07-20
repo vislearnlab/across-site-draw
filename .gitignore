@@ -7,3 +7,7 @@ bootstrap*
 201b_analysis_3_files/
 201b_analysis_3.html
 data/figures/*png
+analysis/*dinov2
+analysis/word_embeddings/*.bin*
+analysis/*.csv
+data/embeddings/*dinov2*

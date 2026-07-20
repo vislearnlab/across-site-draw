@@ -31,18 +31,18 @@ dinov2_transforms = ImageExtractor.get_transformations(dinov2_extraction_setting
 
 dinov2_generator = EmbeddingGenerator.from_model(
     "dinov2-base",
-    device="mps",  # change to "cpu" or "cuda" as needed
+    device="cuda:0",  # change to "cpu" or "cuda" as needed
     output_type="doc",
     transform=dinov2_transforms
 )
 
 # %%
-drawings_folder = Path("/Volumes/vislearnlab/experiments/drawing/data")
+drawings_folder = Path("/labs/vislearnlab/experiments/drawing/data")
 beijing_resized_dir = drawings_folder / Path("beijing/resized_drawings")
 kisumu_resized_dir = drawings_folder / Path("kisumu/resized_drawings")
 newdelhi_dir = drawings_folder / Path("india/sketches_full_dataset")
 newdelhi_df = pd.read_csv(drawings_folder / Path("india/AllDescriptives_images_final_india_run_v1.csv"))
-newdelhi_subject_data = pd.read_csv(Path("/Volumes/vislearnlab/experiments/drawing/data/india/subject_data.csv"))
+newdelhi_subject_data = pd.read_csv(Path("/labs/vislearnlab/experiments/drawing/data/india/subject_data.csv"))
 
 # %%
 # Beijing + sanjose (same folder)
