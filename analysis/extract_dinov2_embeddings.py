@@ -67,6 +67,8 @@ dinov2_generator.generate_image_embeddings(
 valid_pids = newdelhi_subject_data[newdelhi_subject_data["Age (months)"] > 0]["PID"].unique().tolist()
 newdelhi_df = newdelhi_df.rename(columns={'filename': 'image1', 'category': 'text1'})
 newdelhi_df['text1'] = newdelhi_df['text1'].apply(lambda x: " ".join(x.split('_')))
+# image1 has /Volumes paths baked in from the original India csv -- remap to the server mount
+newdelhi_df['image1'] = newdelhi_df['image1'].str.replace("/Volumes", "/labs", regex=False)
 filtered_newdelhi_df = newdelhi_df[newdelhi_df['participant_id'].str.upper().isin(valid_pids)]
 filtered_newdelhi_df.to_csv("tmp_newdelhi_draw_df.csv")
 
@@ -84,19 +86,28 @@ kisumu_store = EmbeddingStore.from_doc("kisumu_drawings_resized_dinov2/image_emb
 beijing_sanjose_store = EmbeddingStore.from_doc("beijing_sanjose_drawings_resized_dinov2/image_embeddings/dinov2-b_image_embeddings_doc")
 
 # %%
-# split beijing/sanjose the same way as embedding_retrieval.ipynb cell 21
-# (only embeddings that include verbal cues, not picture cues)
+# split beijing/sanjose by the "site" column in beijing/metadata.csv (THU = Beijing,
+# CDM = sanjose)
+beijing_metadata = pd.read_csv(drawings_folder / Path("beijing/metadata.csv"))
+filename_to_site = dict(zip(beijing_metadata["filename"], beijing_metadata["site"]))
+
 # dim is explicit (768 for dinov2-base) since these stores are built via add_embedding
 # rather than from_doc, and EmbeddingStore() otherwise defaults to CLIP's 512-dim schema
 dinov2_dim = dinov2_generator.model.embedding_dim
 sanjose_store = EmbeddingStore(dim=dinov2_dim)
 beijing_store = EmbeddingStore(dim=dinov2_dim)
+n_unmatched = 0
 for embedding in beijing_sanjose_store.EmbeddingList:
     if "S_" in embedding.url:
-        if "sanjose" in embedding.url:
+        site = filename_to_site.get(Path(embedding.url).name)
+        if site == "THU":
+            beijing_store.add_embedding(embedding=embedding.embedding, url=embedding.url)
+        elif site == "CDM":
             sanjose_store.add_embedding(embedding=embedding.embedding, url=embedding.url)
         else:
-            beijing_store.add_embedding(embedding=embedding.embedding, url=embedding.url)
+            n_unmatched += 1
+if n_unmatched:
+    print(f"WARNING: {n_unmatched} embeddings had no site match in beijing/metadata.csv and were dropped")
 
 print(f"Kisumu embeddings: {len(kisumu_store.EmbeddingList)}")
 print(f"Beijing embeddings: {len(beijing_store.EmbeddingList)}")
