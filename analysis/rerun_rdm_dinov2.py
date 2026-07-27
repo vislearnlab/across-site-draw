@@ -237,6 +237,17 @@ for s1, s2 in combinations(SITE_NAMES, 2):
     print(f"{s1} vs {s2}: r = {r_matched:.3f} (full = {obs_corrs[(s1, s2)]:.3f})")
 
 # %%
+# 1b (matched subset) -- site-label permutation test restricted to the matched subset,
+# same H0 as the full-population version (cell 27): the site boundary is meaningless --
+# any random partition of the same sizes should give equally correlated RDMs
+print("\n1b (matched subset) - site-label permutation (p = proportion of null <= observed):")
+site_perm_matched_results = {}
+for s1, s2 in combinations(SITE_NAMES, 2):
+    obs_r, perm_rs, p = site_perm_test(s1, s2, matched_df, CATEGORIES)
+    site_perm_matched_results[(s1, s2)] = (obs_r, perm_rs.mean(), p)
+    print(f"{s1} vs {s2}: r = {obs_r:.3f}, null mean = {perm_rs.mean():.3f}, p = {p:.4f}")
+
+# %%
 # random-downsample control -- re-run rather than assumed to carry over from the CLIP run,
 # since the null distribution can behave differently in a space with different intrinsic
 # dimensionality (DINOv2's 768 vs CLIP's 512)
@@ -259,6 +270,7 @@ summary_rows = []
 for s1, s2 in combinations(SITE_NAMES, 2):
     cat_r, cat_p = category_perm_results[(s1, s2)]
     site_r, site_null_mean, site_p = site_perm_results[(s1, s2)]
+    site_r_matched, site_null_mean_matched, site_p_matched = site_perm_matched_results[(s1, s2)]
     rand_mean, rand_sd = downsample_results[(s1, s2)]
     summary_rows.append({
         'site1': s1, 'site2': s2,
@@ -269,6 +281,8 @@ for s1, s2 in combinations(SITE_NAMES, 2):
         'category_perm_p_dinov2': cat_p,
         'site_perm_p_dinov2': site_p,
         'site_perm_null_mean_dinov2': site_null_mean,
+        'site_perm_p_matched_dinov2': site_p_matched,
+        'site_perm_null_mean_matched_dinov2': site_null_mean_matched,
     })
 summary_df = pd.DataFrame(summary_rows)
 summary_df.to_csv("../data/rdm_results_dinov2.csv", index=False)
