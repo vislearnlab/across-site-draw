@@ -24,6 +24,9 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
+import matplotlib
+matplotlib.use("Agg")  # headless server -- save plots directly, no display
+import matplotlib.pyplot as plt
 
 from vislearnlabpy.embeddings.embedding_store import EmbeddingStore
 from vislearnlabpy.embeddings.similarity_utils import cosine_matrix
@@ -37,7 +40,7 @@ CATEGORIES_GROUPED = [
     "cup", "hat", "watch",
     "bird", "cat", "rabbit",
 ]
-SITE_NAMES = ['Beijing', 'San Jose', 'Kisumu', 'New Delhi']
+SITE_NAMES = ['Beijing', 'San Jose', 'Kisumu', 'Delhi']
 
 # %%
 # full CLIP-derived population -- this defines the population and the exact age/category/
@@ -45,6 +48,10 @@ SITE_NAMES = ['Beijing', 'San Jose', 'Kisumu', 'New Delhi']
 # which drawings exist and how they're labeled comes straight from the CLIP run
 clip_meta = pd.read_parquet("../data/emb_df.parquet").drop(columns=['embedding'])
 matched_ids = pd.read_csv("../data/matched_subset_ids.csv")
+
+# display rename -- the persisted CLIP data labels this site "New Delhi"
+clip_meta['location'] = clip_meta['location'].replace({'New Delhi': 'Delhi'})
+matched_ids['location'] = matched_ids['location'].replace({'New Delhi': 'Delhi'})
 matched_urls = set(matched_ids['url'])
 
 print(f"Full population (from emb_df.parquet): {len(clip_meta)} drawings")
@@ -267,3 +274,32 @@ summary_df = pd.DataFrame(summary_rows)
 summary_df.to_csv("../data/rdm_results_dinov2.csv", index=False)
 print("\nSaved summary to ../data/rdm_results_dinov2.csv")
 print(summary_df.to_string(index=False))
+
+# %%
+# RDM heatmaps -- full population and matched subset (DINOv2), mirrors
+# 201b_analyses_1_2.ipynb cells 31-32, shared color scale across all of them
+rdm_plot_dir = Path("../data/figures/rdm_plots/stats")
+rdm_plot_dir.mkdir(parents=True, exist_ok=True)
+
+all_rdms = list(site_rdms.values()) + list(matched_rdms.values())
+vmax = max(rdm[np.tril_indices(len(CATEGORIES_GROUPED), k=-1)].max() for rdm in all_rdms)
+
+def plot_rdm(rdm, title, filename):
+    fig, ax = plt.subplots(figsize=(5, 4.5))
+    im = ax.imshow(rdm, cmap='viridis', vmin=0, vmax=vmax)
+    ax.set_xticks(range(len(CATEGORIES_GROUPED)))
+    ax.set_yticks(range(len(CATEGORIES_GROUPED)))
+    ax.set_xticklabels(CATEGORIES_GROUPED, rotation=90, fontsize=8)
+    ax.set_yticklabels(CATEGORIES_GROUPED, fontsize=8)
+    ax.set_title(title)
+    fig.colorbar(im, ax=ax, shrink=0.8, label='Cosine distance')
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+for loc in SITE_NAMES:
+    slug = loc.lower().replace(" ", "_")
+    plot_rdm(site_rdms[loc], f'{loc} (DINOv2, full)', rdm_plot_dir / f"rdm_dinov2_{slug}.svg")
+    plot_rdm(matched_rdms[loc], f'{loc} (DINOv2, matched)', rdm_plot_dir / f"rdm_matched_dinov2_{slug}.svg")
+
+print(f"\nSaved RDM heatmaps to {rdm_plot_dir}/")
