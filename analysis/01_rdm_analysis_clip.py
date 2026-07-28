@@ -252,8 +252,10 @@ def category_perm_test(rdm1, rdm2, n_perm=1000, seed=42):
     return obs_r, perm_rs, float(np.mean(perm_rs >= obs_r))
 
 print("\n1a - category-label permutation (p = proportion of shuffled >= observed):")
+category_perm_results = {}
 for (s1, s2) in obs_corrs:
     obs_r, _, p = category_perm_test(site_rdms[s1], site_rdms[s2])
+    category_perm_results[(s1, s2)] = (obs_r, p)
     print(f"{s1} vs {s2}: r = {obs_r:.3f}, p = {p:.4f}")
 
 # %%
@@ -289,8 +291,10 @@ def site_perm_test(loc1, loc2, emb_df, categories, n_perm=1000, seed=42):
     return obs_r, perm_rs, float(np.mean(perm_rs <= obs_r))
 
 print("\n1b - site-label permutation (p = proportion of null <= observed):")
+site_perm_results = {}
 for s1, s2 in combinations(SITE_NAMES, 2):
     obs_r, perm_rs, p = site_perm_test(s1, s2, emb_df, CATEGORIES)
+    site_perm_results[(s1, s2)] = (obs_r, perm_rs.mean(), p)
     print(f"{s1} vs {s2}: r = {obs_r:.3f}, null mean = {perm_rs.mean():.3f}, p = {p:.4f}")
 
 # %%
@@ -359,6 +363,18 @@ matched_df.drop(columns=['embedding']).to_csv("../data/matched_subset_ids.csv", 
 print(f"\nPersisted {len(matched_df)} matched-subset drawing IDs to ../data/matched_subset_ids.csv")
 
 # %%
+# 1b (matched subset) -- site-label permutation test restricted to the matched subset,
+# same H0 as the full-population version above: the site boundary is meaningless -- any
+# random partition of the same sizes should give equally correlated RDMs
+
+print("\n1b (matched subset) - site-label permutation (p = proportion of null <= observed):")
+site_perm_matched_results = {}
+for s1, s2 in combinations(SITE_NAMES, 2):
+    obs_r, perm_rs, p = site_perm_test(s1, s2, matched_df, CATEGORIES)
+    site_perm_matched_results[(s1, s2)] = (obs_r, perm_rs.mean(), p)
+    print(f"{s1} vs {s2}: r = {obs_r:.3f}, null mean = {perm_rs.mean():.3f}, p = {p:.4f}")
+
+# %%
 # control: random downsampling to same cell sizes, no similarity matching
 
 matched_cell_sizes = matched_df.groupby(['location', 'drawing_category']).size()
@@ -392,13 +408,42 @@ def random_downsample(emb_df, target_cell_sizes, site_names, categories, n_iter=
 random_corrs = random_downsample(emb_df, matched_cell_sizes, SITE_NAMES, CATEGORIES)
 
 print("\nRandom downsample control (mean +/- sd over 100 iterations):")
+downsample_results = {}
 for s1, s2 in combinations(SITE_NAMES, 2):
     rand_mean = random_corrs[(s1, s2)].mean()
     rand_sd = random_corrs[(s1, s2)].std()
+    downsample_results[(s1, s2)] = (rand_mean, rand_sd)
     r_matched = spearman_rdm(matched_rdms[s1], matched_rdms[s2])
     r_orig = obs_corrs[(s1, s2)]
     print(f"{s1} vs {s2}: original = {r_orig:.3f}, matched = {r_matched:.3f}, "
           f"random = {rand_mean:.3f} (sd {rand_sd:.3f})")
+
+# %%
+# tidy summary for direct comparison against the DINOv2 run's printed output in
+# 02_rdm_analysis_dinov2.py
+summary_rows = []
+for s1, s2 in combinations(SITE_NAMES, 2):
+    cat_r, cat_p = category_perm_results[(s1, s2)]
+    site_r, site_null_mean, site_p = site_perm_results[(s1, s2)]
+    site_r_matched, site_null_mean_matched, site_p_matched = site_perm_matched_results[(s1, s2)]
+    rand_mean, rand_sd = downsample_results[(s1, s2)]
+    r_matched = spearman_rdm(matched_rdms[s1], matched_rdms[s2])
+    summary_rows.append({
+        'site1': s1, 'site2': s2,
+        'r_full_clip': obs_corrs[(s1, s2)],
+        'r_matched_clip': r_matched,
+        'r_random_downsample_mean_clip': rand_mean,
+        'r_random_downsample_sd_clip': rand_sd,
+        'category_perm_p_clip': cat_p,
+        'site_perm_p_clip': site_p,
+        'site_perm_null_mean_clip': site_null_mean,
+        'site_perm_p_matched_clip': site_p_matched,
+        'site_perm_null_mean_matched_clip': site_null_mean_matched,
+    })
+summary_df = pd.DataFrame(summary_rows)
+summary_df.to_csv("../data/rdm_results_clip.csv", index=False)
+print("\nSaved summary to ../data/rdm_results_clip.csv")
+print(summary_df.to_string(index=False))
 
 # %%
 # RDM heatmaps -- full population and matched subset, shared color scale across all of them
