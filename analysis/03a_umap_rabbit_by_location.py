@@ -35,7 +35,7 @@ location_colors = {
     'Beijing': '#2a78d6',
     'San Jose': '#4a3aa7',
     'Kisumu': '#eda100',
-    'New Delhi': '#008300',
+    'Delhi': '#008300',
 }
 
 fig, ax = plt.subplots(figsize=(8, 7))

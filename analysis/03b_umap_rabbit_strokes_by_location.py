@@ -41,7 +41,7 @@ location_colors = {
     'Beijing': '#2a78d6',
     'San Jose': '#4a3aa7',
     'Kisumu': '#eda100',
-    'New Delhi': '#008300',
+    'Delhi': '#008300',
 }
 
 def resolve_drawing_path(url):
@@ -60,7 +60,7 @@ def resolve_drawing_path(url):
 def tint_drawing(path, hex_color):
     """Recolor a drawing's ink to hex_color; ink darkness becomes alpha, background
     becomes transparent. Works for both binary tablet strokes (Beijing/San
-    Jose/New Delhi) and grayscale Kisumu scans."""
+    Jose/Delhi) and grayscale Kisumu scans."""
     rgb = tuple(int(hex_color.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4))
     gray = np.array(Image.open(path).convert('L'), dtype=np.float32)
     alpha = np.clip(255 - gray, 0, 255).astype(np.uint8)
