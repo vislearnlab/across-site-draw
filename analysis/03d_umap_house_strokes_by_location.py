@@ -87,7 +87,7 @@ pad_y = (house_df['umap_y'].max() - house_df['umap_y'].min()) * 0.05
 ax.set_xlim(house_df['umap_x'].min() - pad_x, house_df['umap_x'].max() + pad_x)
 ax.set_ylim(house_df['umap_y'].min() - pad_y, house_df['umap_y'].max() + pad_y)
 ax.set(xlabel='UMAP 1', ylabel='UMAP 2',
-       title=f'UMAP of house drawings (n={len(house_df)}), strokes colored by location')
+       title=f'UMAP of house drawings (n={len(house_df)})')
 ax.set_xticks([])
 ax.set_yticks([])
 

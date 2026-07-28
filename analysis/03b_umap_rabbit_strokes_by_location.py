@@ -91,7 +91,7 @@ pad_y = (rabbit_df['umap_y'].max() - rabbit_df['umap_y'].min()) * 0.05
 ax.set_xlim(rabbit_df['umap_x'].min() - pad_x, rabbit_df['umap_x'].max() + pad_x)
 ax.set_ylim(rabbit_df['umap_y'].min() - pad_y, rabbit_df['umap_y'].max() + pad_y)
 ax.set(xlabel='UMAP 1', ylabel='UMAP 2',
-       title=f'UMAP of rabbit drawings (n={len(rabbit_df)}), strokes colored by location')
+       title=f'UMAP of rabbit drawings (n={len(rabbit_df)})')
 ax.set_xticks([])
 ax.set_yticks([])
 
@@ -135,7 +135,7 @@ for age_lo, age_hi in age_groups:
     ax.set_xlim(rabbit_df['umap_x'].min() - pad_x, rabbit_df['umap_x'].max() + pad_x)
     ax.set_ylim(rabbit_df['umap_y'].min() - pad_y, rabbit_df['umap_y'].max() + pad_y)
     ax.set(xlabel='UMAP 1', ylabel='UMAP 2',
-           title=f'UMAP of rabbit drawings, age {age_lo}-{age_hi} (n={len(group_df)}), strokes colored by location')
+           title=f'UMAP of rabbit drawings, age {age_lo}-{age_hi} (n={len(group_df)})')
     ax.set_xticks([])
     ax.set_yticks([])
 
