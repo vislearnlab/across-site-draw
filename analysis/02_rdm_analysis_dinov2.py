@@ -1,12 +1,12 @@
 # %%
-# Re-run the CLIP RDM/permutation/downsample pipeline (201b_analyses_1_2.ipynb) with DINOv2
+# Re-run the CLIP RDM/permutation/downsample pipeline (rdm_analysis_clip.py) with DINOv2
 # embeddings substituted for the exact same drawing population and matched subset.
 #
 # The matched-subset selection (which 2,392 drawings, at which ages/categories/sites) is
 # NOT re-derived here -- DINOv2 has no text tower, so there's no DINOv2-native
 # target_similarity to re-run match_recognizability() against, and re-matching on DINOv2
 # data would select a different subset, defeating the point of holding the population fixed.
-# Instead this script reuses the exact drawing identities 201b_analyses_1_2.ipynb persists
+# Instead this script reuses the exact drawing identities rdm_analysis_clip.py persists
 # (../data/emb_df.parquet for the full population, ../data/matched_subset_ids.csv for the
 # matched subset) and only substitutes each drawing's embedding vector with its DINOv2
 # counterpart, joined by filename. Any difference in RDM correlations, permutation
@@ -14,8 +14,8 @@
 # alone, not to a different set of drawings.
 #
 # Prerequisites:
-#   ../data/emb_df.parquet               (201b_analyses_1_2.ipynb, cell "renaming sites")
-#   ../data/matched_subset_ids.csv        (201b_analyses_1_2.ipynb, cell "RDMs with matching...")
+#   ../data/emb_df.parquet               (rdm_analysis_clip.py)
+#   ../data/matched_subset_ids.csv        (rdm_analysis_clip.py, RDMs with matching...)
 #   ../data/embeddings/full_embedding_store_dinov2.doc  (extract_dinov2_embeddings.py)
 
 from pathlib import Path
@@ -49,7 +49,8 @@ SITE_NAMES = ['Beijing', 'San Jose', 'Kisumu', 'Delhi']
 clip_meta = pd.read_parquet("../data/emb_df.parquet").drop(columns=['embedding'])
 matched_ids = pd.read_csv("../data/matched_subset_ids.csv")
 
-# display rename -- the persisted CLIP data labels this site "New Delhi"
+# tolerate stale persisted data from before rdm_analysis_clip.py renamed this site
+# "New Delhi" -> "Delhi"; a no-op once emb_df.parquet has been regenerated
 clip_meta['location'] = clip_meta['location'].replace({'New Delhi': 'Delhi'})
 matched_ids['location'] = matched_ids['location'].replace({'New Delhi': 'Delhi'})
 matched_urls = set(matched_ids['url'])
@@ -100,9 +101,9 @@ print("Matched subset per site x category cell counts (DINOv2):")
 print(matched_df.groupby(['location', 'drawing_category']).size().unstack().to_string())
 
 # %%
-# RDM / permutation / downsample helpers -- identical to 201b_analyses_1_2.ipynb
-# (cells 21, 26, 27, 33), except the embedding-dim zero-fallback is inferred from the
-# data instead of hardcoded to CLIP's 512
+# RDM / permutation / downsample helpers -- identical to rdm_analysis_clip.py
+# (compute_rdm, category_perm_test, site_perm_test, random_downsample), except the
+# embedding-dim zero-fallback is inferred from the data instead of hardcoded to CLIP's 512
 
 def compute_rdm(df, categories):
     means = np.stack([
@@ -265,7 +266,7 @@ for s1, s2 in combinations(SITE_NAMES, 2):
 
 # %%
 # tidy summary for direct comparison against the CLIP run's printed output in
-# 201b_analyses_1_2.ipynb
+# rdm_analysis_clip.py
 summary_rows = []
 for s1, s2 in combinations(SITE_NAMES, 2):
     cat_r, cat_p = category_perm_results[(s1, s2)]
@@ -290,8 +291,8 @@ print("\nSaved summary to ../data/rdm_results_dinov2.csv")
 print(summary_df.to_string(index=False))
 
 # %%
-# RDM heatmaps -- full population and matched subset (DINOv2), mirrors
-# 201b_analyses_1_2.ipynb cells 31-32, shared color scale across all of them
+# RDM heatmaps -- full population and matched subset (DINOv2), mirrors the RDM heatmap
+# section of rdm_analysis_clip.py, shared color scale across all of them
 rdm_plot_dir = Path("../data/figures/rdm_plots/stats")
 rdm_plot_dir.mkdir(parents=True, exist_ok=True)
 

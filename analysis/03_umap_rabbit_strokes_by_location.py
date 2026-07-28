@@ -8,9 +8,9 @@
 # pixels directly: dark ink -> alpha, background -> transparent, then tinted
 # to the site's hex color.
 #
-# Prerequisite: ../data/emb_df.parquet (produced by 201b_analyses_1_2.ipynb,
-# cell "renaming sites"). Drawing PNGs are read from each row's `url`, which
-# must be reachable on disk (e.g. the /Volumes/vislearnlab mount).
+# Prerequisite: ../data/emb_df.parquet (produced by rdm_analysis_clip.py).
+# Drawing PNGs are read from each row's `url`, which must be reachable on
+# disk (e.g. the /Volumes/vislearnlab mount).
 
 from pathlib import Path
 

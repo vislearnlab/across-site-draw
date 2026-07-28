@@ -5,8 +5,7 @@
 # only, rather than projecting all categories together, so structure is not
 # dominated by between-category separation.
 #
-# Prerequisite: ../data/emb_df.parquet (produced by 201b_analyses_1_2.ipynb,
-# cell "renaming sites").
+# Prerequisite: ../data/emb_df.parquet (produced by rdm_analysis_clip.py).
 
 from pathlib import Path
 

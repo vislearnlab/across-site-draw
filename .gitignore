@@ -12,4 +12,3 @@ analysis/word_embeddings/*.bin*
 analysis/*.csv
 data/embeddings/*dinov2*
 data/matched_subset_ids.csv
-data/figures/umap_plots
