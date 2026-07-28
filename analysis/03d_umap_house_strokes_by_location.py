@@ -34,10 +34,10 @@ house_df['umap_y'] = coords[:, 1]
 
 # %%
 location_colors = {
-    'Beijing': '#2a78d6',
-    'San Jose': '#4a3aa7',
-    'Kisumu': '#eda100',
-    'Delhi': '#008300',
+    'Beijing': '#66c2a5',
+    'San Jose': '#e78ac3',
+    'Kisumu': '#8da0cb',
+    'Delhi': '#fc8d62',
 }
 
 def resolve_drawing_path(url):

@@ -32,10 +32,10 @@ rabbit_df['umap_y'] = coords[:, 1]
 # fixed color order (matches the site-coloring convention used elsewhere in
 # this repo, e.g. embedding_retrieval.ipynb's create_tsne_per_category)
 location_colors = {
-    'Beijing': '#2a78d6',
-    'San Jose': '#4a3aa7',
-    'Kisumu': '#eda100',
-    'Delhi': '#008300',
+    'Beijing': '#66c2a5',
+    'San Jose': '#e78ac3',
+    'Kisumu': '#8da0cb',
+    'Delhi': '#fc8d62',
 }
 
 fig, ax = plt.subplots(figsize=(8, 7))
