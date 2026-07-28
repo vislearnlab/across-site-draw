@@ -39,10 +39,23 @@ rabbit_df['umap_y'] = coords[:, 1]
 # %%
 location_colors = {
     'Beijing': '#2a78d6',
-    'San Jose': '#1baf7a',
+    'San Jose': '#4a3aa7',
     'Kisumu': '#eda100',
     'New Delhi': '#008300',
 }
+
+def resolve_drawing_path(url):
+    """`url` was recorded at CLIP-extraction time as an absolute /Volumes/vislearnlab/...
+    path; on machines where the same share is mounted at /labs/vislearnlab/... instead
+    (e.g. the DINOv2 extraction host, see extract_dinov2_embeddings.py), fall back to
+    that prefix. Returns None if neither mount has the file."""
+    p = Path(url)
+    if p.exists():
+        return p
+    alt = Path(url.replace("/Volumes/", "/labs/", 1))
+    if alt.exists():
+        return alt
+    return None
 
 def tint_drawing(path, hex_color):
     """Recolor a drawing's ink to hex_color; ink darkness becomes alpha, background
@@ -61,10 +74,11 @@ fig, ax = plt.subplots(figsize=(11, 10))
 
 n_missing = 0
 for _, row in rabbit_df.iterrows():
-    if not Path(row['url']).exists():
+    path = resolve_drawing_path(row['url'])
+    if path is None:
         n_missing += 1
         continue
-    tinted = tint_drawing(row['url'], location_colors[row['location']])
+    tinted = tint_drawing(path, location_colors[row['location']])
     imagebox = OffsetImage(tinted, zoom=0.25)
     ab = AnnotationBbox(imagebox, (row['umap_x'], row['umap_y']), frameon=False, pad=0)
     ax.add_artist(ab)

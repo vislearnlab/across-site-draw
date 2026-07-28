@@ -33,7 +33,7 @@ rabbit_df['umap_y'] = coords[:, 1]
 # this repo, e.g. embedding_retrieval.ipynb's create_tsne_per_category)
 location_colors = {
     'Beijing': '#2a78d6',
-    'San Jose': '#1baf7a',
+    'San Jose': '#4a3aa7',
     'Kisumu': '#eda100',
     'New Delhi': '#008300',
 }
