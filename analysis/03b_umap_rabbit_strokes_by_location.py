@@ -105,3 +105,43 @@ output_dir.mkdir(parents=True, exist_ok=True)
 plt.savefig(output_dir / "umap_rabbit_strokes_by_location.png", dpi=600, bbox_inches='tight')
 # plt.savefig(output_dir / "umap_rabbit_strokes_by_location.svg", bbox_inches='tight')
 plt.show()
+
+# %%
+# same UMAP space (rabbit_df/coords above, fit only once) and the same
+# xlim/ylim/figsize/dpi/zoom as the plot above, but saved as three separate
+# plots split by age group instead of one plot with everyone -- so the three
+# images are on the same visual scale and line up consistently in a row
+age_groups = [(4, 5), (6, 7), (8, 9)]
+
+for age_lo, age_hi in age_groups:
+    group_df = rabbit_df[rabbit_df['age'].between(age_lo, age_hi)]
+
+    fig, ax = plt.subplots(figsize=(11, 10))
+
+    n_missing = 0
+    for _, row in group_df.iterrows():
+        path = resolve_drawing_path(row['url'])
+        if path is None:
+            n_missing += 1
+            continue
+        tinted = tint_drawing(path, location_colors[row['location']])
+        imagebox = OffsetImage(tinted, zoom=0.25)
+        ab = AnnotationBbox(imagebox, (row['umap_x'], row['umap_y']), frameon=False, pad=0)
+        ax.add_artist(ab)
+
+    if n_missing:
+        print(f"WARNING: age {age_lo}-{age_hi}: {n_missing} drawing(s) missing on disk, skipped")
+
+    ax.set_xlim(rabbit_df['umap_x'].min() - pad_x, rabbit_df['umap_x'].max() + pad_x)
+    ax.set_ylim(rabbit_df['umap_y'].min() - pad_y, rabbit_df['umap_y'].max() + pad_y)
+    ax.set(xlabel='UMAP 1', ylabel='UMAP 2',
+           title=f'UMAP of rabbit drawings, age {age_lo}-{age_hi} (n={len(group_df)}), strokes colored by location')
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    legend_elements = [Patch(facecolor=c, label=loc) for loc, c in location_colors.items()]
+    ax.legend(handles=legend_elements, title='Location', loc='best')
+
+    plt.tight_layout()
+    plt.savefig(output_dir / f"umap_rabbit_strokes_age_{age_lo}_{age_hi}.png", dpi=600, bbox_inches='tight')
+    plt.show()
