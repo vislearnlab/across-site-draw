@@ -135,13 +135,18 @@ print(f"Total: {len(emb_df)} drawings")
 text_labels = list(text_embs.keys())
 text_matrix = np.stack([text_embs[l] for l in text_labels])
 
+CLIP_LOGIT_SCALE = 100.0  # matches CLIP's learned logit scale (exp(temperature) ~= 100)
+
 def classify_drawing(drawing_emb, target_category):
     sims = cosine_matrix(drawing_emb.reshape(1, -1), text_matrix)[0]
     predicted = text_labels[np.argmax(sims)]
     target_key = f"drawing of a {target_category}"
-    target_sim = sims[text_labels.index(target_key)]
+    target_idx = text_labels.index(target_key)
+    logits = CLIP_LOGIT_SCALE * sims
+    probs = np.exp(logits - logits.max())
+    probs /= probs.sum()
     recognized = predicted == target_key
-    return recognized, float(target_sim)
+    return recognized, float(probs[target_idx])
 
 results = emb_df.apply(
     lambda row: classify_drawing(row['embedding'], row['drawing_category']), axis=1
